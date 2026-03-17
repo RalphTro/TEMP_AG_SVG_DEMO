@@ -1,0 +1,230 @@
+<svg width="1280" height="720"
+     viewBox="0 0 1280 720"
+     xmlns="http://www.w3.org/2000/svg"
+     overflow="hidden">
+
+  <style>
+    .hoverable rect { transition: fill 120ms ease-in-out; }
+  </style>
+
+  <g>
+    <rect x="0" y="0" width="1280" height="720" fill="#FFFFFF"/>
+
+    <!-- CAPTURE (middle) -->
+    <g id="capture" class="hoverable" pointer-events="all">
+      <rect x="94" y="335" width="620" height="146" fill="#4472C4"/>
+      <text fill="#FFFFFF" font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700" font-size="64"
+            transform="translate(131.638 429)">Capture</text>
+    </g>
+
+    <!-- IDENTIFY (bottom) -->
+    <g id="identify" class="hoverable" pointer-events="all">
+      <rect x="94" y="511" width="812" height="146" fill="#CC6600"/>
+      <text fill="#FFFFFF" font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700" font-size="64"
+            transform="translate(131.638 604)">Identify</text>
+    </g>
+
+    <!-- SHARE (top) -->
+    <g id="share" class="hoverable" pointer-events="all">
+      <rect x="94" y="160" width="812" height="146" fill="#70AD47"/>
+      <text fill="#FFFFFF" font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700" font-size="64"
+            transform="translate(131.638 253)">Share</text>
+      <rect x="760" y="160" width="146" height="321" fill="#70AD47"/>
+    </g>
+
+    <g id="text-techstandards">
+      <text font-family="Aptos,Aptos_MSFontService,sans-serif" font-weight="700"
+            font-size="48" transform="translate(93.7348 106)">Technical Standards</text>
+    </g>
+
+    <!-- USE (right) -->
+    <g id="use" class="hoverable" pointer-events="all">
+      <rect x="952" y="160" width="146" height="497" fill="#00B0F0"/>
+      <text fill="#FFFFFF" font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700" font-size="64"
+            transform="translate(968.785 429)">Use</text>
+    </g>
+
+    <g id="text-appstandards">
+      <text font-family="Aptos,Aptos_MSFontService,sans-serif" font-weight="700"
+            font-size="48"
+            transform="matrix(-1.83697e-16 -1 1 -1.83697e-16 1177.89 654)">Application Standards</text>
+    </g>
+
+    <!-- Tooltip layer -->
+    <g id="hint" visibility="hidden" pointer-events="none">
+      <rect id="hint-bg" x="0" y="0" width="520" height="84" rx="12" ry="12"
+            fill="#FFFFFF" stroke="#333333" stroke-width="2" opacity="0.96"/>
+      <text id="hint-text" x="16" y="34"
+            font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-size="20" fill="#111111"></text>
+    </g>
+
+    <script><![CDATA[
+      (function () {
+        const svg = document.documentElement;
+
+        const HINTS = {
+          identify: 'Example: GS1 ID Keys such as the Global Trade Item Number (GTIN)',
+          capture:  'Example: QR Code encoding a GS1 Digital Link URI',
+          share:    'Example: an Invoice message',
+          use:      'Example: GS1 Digital Product Passport (DPP) Application Standard'
+        };
+
+        const hint = document.getElementById('hint');
+        const hintBg = document.getElementById('hint-bg');
+        const hintText = document.getElementById('hint-text');
+
+        const originals = new Map();
+
+        // Layout tuning
+        const PAD = 16;                // padding inside tooltip
+        const LINE_HEIGHT = 26;        // dy between lines
+        const MAX_TOOLTIP_W = 620;     // allow wider tooltip than before (prevents truncation)
+        const MIN_TOOLTIP_W = 420;     // avoid too narrow
+        const RIGHT_GAP = 16;
+        const VIEW_W = 1280, VIEW_H = 720;
+
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+        function lightenHex(hex, amt) {
+          const h = (hex || '#000000').replace('#','');
+          const r = parseInt(h.substring(0,2),16);
+          const g = parseInt(h.substring(2,4),16);
+          const b = parseInt(h.substring(4,6),16);
+          const lr = Math.round(r + (255 - r) * amt);
+          const lg = Math.round(g + (255 - g) * amt);
+          const lb = Math.round(b + (255 - b) * amt);
+          const toHex = n => n.toString(16).padStart(2,'0');
+          return `#${toHex(lr)}${toHex(lg)}${toHex(lb)}`;
+        }
+
+        function setHoverFill(group, on) {
+          group.querySelectorAll('rect').forEach(rect => {
+            if (!originals.has(rect)) originals.set(rect, rect.getAttribute('fill') || '#000000');
+            const orig = originals.get(rect);
+            rect.setAttribute('fill', on ? lightenHex(orig, 0.15) : orig);
+          });
+        }
+
+        // Build multi-line tooltip text with tspans and compute required width/height
+        function setTooltipText(str, maxTextW) {
+          // clear
+          while (hintText.firstChild) hintText.removeChild(hintText.firstChild);
+
+          const words = (str || '').split(/\s+/).filter(Boolean);
+          let line = '';
+          let lines = [];
+
+          // We'll measure using a temporary tspan
+          const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          tspan.setAttribute('x', String(PAD));
+          tspan.setAttribute('dy', '0');
+          hintText.appendChild(tspan);
+
+          function measure(s) {
+            tspan.textContent = s;
+            return tspan.getComputedTextLength();
+          }
+
+          for (let i=0; i<words.length; i++) {
+            const test = line ? (line + ' ' + words[i]) : words[i];
+            if (measure(test) > maxTextW && line) {
+              lines.push(line);
+              line = words[i];
+            } else {
+              line = test;
+            }
+          }
+          if (line) lines.push(line);
+
+          // Now render lines as tspans
+          while (hintText.firstChild) hintText.removeChild(hintText.firstChild);
+          lines.forEach((ln, idx) => {
+            const sp = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            sp.setAttribute('x', String(PAD));
+            sp.setAttribute('dy', idx === 0 ? '0' : String(LINE_HEIGHT));
+            sp.textContent = ln;
+            hintText.appendChild(sp);
+          });
+
+          // Compute max line width for background sizing
+          let maxLine = 0;
+          Array.from(hintText.childNodes).forEach(sp => {
+            const w = sp.getComputedTextLength();
+            if (w > maxLine) maxLine = w;
+          });
+
+          const bgW = clamp(maxLine + PAD*2, MIN_TOOLTIP_W, MAX_TOOLTIP_W);
+          const bgH = PAD + (lines.length * LINE_HEIGHT) + (PAD - 6);
+
+          hintBg.setAttribute('width', String(bgW));
+          hintBg.setAttribute('height', String(bgH));
+          hintText.setAttribute('y', String(PAD + 18));
+
+          return { bgW, bgH };
+        }
+
+        function positionTooltip(group, id, bgW, bgH) {
+          const b = group.getBBox();
+
+          // Default placement: to the right of hovered group if possible
+          let x = b.x + b.width + RIGHT_GAP;
+          let y = b.y + (b.height/2) - (bgH/2);
+
+          // Special rule: for "use", place in first third of graphic
+          // so it doesn't overlay the "Use" label on the right.
+          if (id === 'use') {
+            // place left, in first third; keep non-overlapping with the use bar
+            // use bar starts around x=952, so pick x around 80..(VIEW_W/3 - bgW)
+            const maxXFirstThird = (VIEW_W / 3) - bgW - 8;
+            x = clamp(80, 8, Math.max(8, maxXFirstThird));
+            // vertically align with the use bar center, but clamped
+            y = b.y + (b.height/2) - (bgH/2);
+          } else {
+            // If right would overflow, move to the left of the hovered box
+            if (x + bgW > VIEW_W - 8) {
+              x = b.x - bgW - RIGHT_GAP;
+            }
+          }
+
+          // Clamp in viewport
+          x = clamp(x, 8, VIEW_W - bgW - 8);
+          y = clamp(y, 8, VIEW_H - bgH - 8);
+
+          hint.setAttribute('transform', `translate(${x},${y})`);
+        }
+
+        function showHint(id, group) {
+          setHoverFill(group, true);
+
+          const text = HINTS[id];
+          if (!text) return;
+
+          // Use a generous wrapping width; this fixes "box not wide enough"
+          const { bgW, bgH } = setTooltipText(text, MAX_TOOLTIP_W - PAD*2);
+
+          positionTooltip(group, id, bgW, bgH);
+          hint.setAttribute('visibility', 'visible');
+        }
+
+        function hideHint(group) {
+          setHoverFill(group, false);
+          hint.setAttribute('visibility', 'hidden');
+        }
+
+        Object.keys(HINTS).forEach(id => {
+          const g = document.getElementById(id);
+          if (!g) return;
+          g.style.cursor = 'pointer';
+          g.addEventListener('mouseenter', () => showHint(id, g));
+          g.addEventListener('mouseleave', () => hideHint(g));
+        });
+      })();
+    ]]></script>
+
+  </g>
+</svg>

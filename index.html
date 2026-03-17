@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en-GB">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Progressive SVG Maturity — Demo</title>
+    <meta name="description"
+        content="A simple website demonstrating four maturity levels of graphics: PNG, pure SVG, SVG with hover effects, and SVG with hover + links." />
+
+    <style>
+        :root {
+            --bg: #0b1220;
+            --panel: rgba(255, 255, 255, .06);
+            --panel2: rgba(255, 255, 255, .10);
+            --text: rgba(255, 255, 255, .90);
+            --muted: rgba(255, 255, 255, .68);
+            --faint: rgba(255, 255, 255, .48);
+
+            --brand: #7c5cff;
+            --brand2: #2fe3c0;
+            --accent: #ffcc66;
+
+            --border: rgba(255, 255, 255, .14);
+            --shadow: 0 12px 30px rgba(0, 0, 0, .35);
+            --shadow2: 0 16px 60px rgba(0, 0, 0, .45);
+
+            --radius: 18px;
+            --radius2: 26px;
+
+            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--sans);
+            color: var(--text);
+            background:
+                radial-gradient(1100px 700px at 15% 15%, rgba(124, 92, 255, .28), transparent 60%),
+                radial-gradient(900px 600px at 85% 20%, rgba(47, 227, 192, .22), transparent 55%),
+                radial-gradient(900px 600px at 60% 90%, rgba(255, 204, 102, .12), transparent 55%),
+                linear-gradient(180deg, #070b14 0%, #0b1220 55%, #070b14 100%);
+            overflow-x: hidden;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .container {
+            width: min(1100px, calc(100% - 48px));
+            margin: 0 auto;
+            padding: 42px 0 64px;
+        }
+
+        header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 26px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .05);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, .18);
+            backdrop-filter: blur(10px);
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--brand), var(--brand2));
+            box-shadow: 0 0 0 4px rgba(124, 92, 255, .18);
+        }
+
+        h1 {
+            margin: 14px 0 8px;
+            font-size: clamp(28px, 4vw, 44px);
+            letter-spacing: -0.02em;
+            line-height: 1.08;
+        }
+
+        .lead {
+            margin: 0;
+            color: var(--muted);
+            font-size: clamp(15px, 1.6vw, 17px);
+            line-height: 1.6;
+            max-width: 78ch;
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            padding-top: 2px;
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, .05);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: .01em;
+            transition: transform .15s ease, background .15s ease, border-color .15s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, .08);
+            border-color: rgba(255, 255, 255, .22);
+        }
+
+        .btn.primary {
+            border-color: rgba(124, 92, 255, .55);
+            background: linear-gradient(135deg, rgba(124, 92, 255, .34), rgba(47, 227, 192, .20));
+        }
+
+        .btn.primary:hover {
+            background: linear-gradient(135deg, rgba(124, 92, 255, .44), rgba(47, 227, 192, .24));
+            border-color: rgba(124, 92, 255, .75);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 18px;
+            margin-top: 24px;
+        }
+
+        .card {
+            grid-column: span 12;
+            border-radius: var(--radius2);
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .04));
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+            transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+            min-height: 360px;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, .22);
+            box-shadow: var(--shadow2);
+        }
+
+        .card.active {
+            outline: 2px solid rgba(124, 92, 255, .55);
+            outline-offset: 0;
+        }
+
+        .card-header {
+            padding: 18px 18px 12px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .stage {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .kicker {
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+            color: var(--muted);
+            font-size: 12px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .16);
+            background: rgba(0, 0, 0, .14);
+            color: var(--muted);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .card h2 {
+            margin: 8px 0 0;
+            font-size: 18px;
+            letter-spacing: -0.01em;
+        }
+
+        .card p {
+            margin: 10px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.55;
+            max-width: 72ch;
+        }
+
+        .card-body {
+            padding: 14px 18px 18px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .frame {
+            border-radius: var(--radius);
+            border: 1px dashed rgba(255, 255, 255, .18);
+            background: rgba(0, 0, 0, .12);
+            min-height: 240px;
+            aspect-ratio: 16 / 9;    
+            height: auto;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .frame img,
+.frame svg{
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;    
+}
+
+
+
+.media{
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+
+
+
+
+        .hint {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--faint);
+            line-height: 1.6;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, .04);
+        }
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 2px;
+            justify-content: flex-end;
+        }
+
+        .tag {
+            font-size: 12px;
+            color: rgba(255, 255, 255, .72);
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .04);
+        }
+
+        /* Responsive (still useful for header layout) */
+        @media (max-width: 900px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .top-actions {
+                justify-content: flex-start;
+            }
+
+            .meta {
+                justify-content: flex-start;
+            }
+        }
+
+        /* --- Stage 3: Hover effects inside the demo SVG --- */
+        .hover-demo .hotspot {
+            cursor: pointer;
+            transition: transform .2s ease, filter .2s ease;
+            transform-origin: center;
+        }
+
+        .hover-demo .hotspot:hover {
+            transform: translateY(-2px) scale(1.02);
+            filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .35));
+        }
+
+        .hover-demo .tooltip {
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity .18s ease, transform .18s ease;
+            pointer-events: none;
+        }
+
+        .hover-demo .hotspot:hover+.tooltip {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- Stage 4: Hover + links --- */
+        .links-demo a:focus-visible {
+            outline: 2px solid rgba(47, 227, 192, .85);
+            outline-offset: 3px;
+            border-radius: 10px;
+        }
+
+        .links-demo .link-chip {
+            cursor: pointer;
+            transition: transform .2s ease, filter .2s ease, opacity .2s ease;
+            transform-origin: center;
+        }
+
+        .links-demo .link-chip:hover {
+            transform: translateY(-2px) scale(1.02);
+            filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .35));
+        }
+
+        footer {
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, .10);
+            color: var(--muted);
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        footer code {
+            font-family: var(--mono);
+            color: rgba(255, 255, 255, .78);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <div class="badge" aria-label="Demo badge">
+                    <span class="dot" aria-hidden="true"></span>
+                    <span>Progressive graphic capability — four maturity levels</span>
+                </div>
+
+                <h1>Going for modern SVGs</h1>
+                <p class="lead">
+                    This page illustrates a four-step progression: a legacy bitmap (PNG),
+                    a pure SVG, an SVG with hover affordances, and an SVG with hover plus clickable links.
+                </p>
+            </div>
+
+            <div class="top-actions" role="group" aria-label="Page actions">
+                <button class="btn" type="button" data-focus="stage1">Highlight Stage 1</button>
+                <button class="btn" type="button" data-focus="stage2">Highlight Stage 2</button>
+                <button class="btn" type="button" data-focus="stage3">Highlight Stage 3</button>
+                <button class="btn primary" type="button" data-focus="stage4">Highlight Stage 4</button>
+            </div>
+        </header>
+
+        <main class="grid" aria-label="Four stages stacked vertically">
+
+            <!-- Stage 1 -->
+            <section class="card" id="stage1" aria-label="Stage 1: Legacy PNG">
+                <div class="card-header">
+                    <div class="stage">
+                        <div class="kicker">
+                            <span class="pill">Stage 1</span>
+                            <span>Baseline</span>
+                        </div>
+                        <h2>Legacy bitmap (PNG)</h2>
+                        <p>
+                            Good for quick sharing, but limited for localisation, accessibility, responsiveness, and
+                            interactive guidance.
+                        </p>
+                    </div>
+                    <div class="meta" aria-label="Stage 1 tags">
+                        <span class="tag">Static</span>
+                        <span class="tag">Pixel-based</span>
+                        <span class="tag">Limited scaling</span>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="frame" aria-label="PNG placeholder">
+                            <img class="media" src="assets/I-C-S_currentPNG.png" alt="Identify–Capture–Share (PNG)" />
+                    </div>
+            </section>
+
+            <!-- Stage 2 -->
+            <section class="card" id="stage2" aria-label="Stage 2: Pure SVG">
+                <div class="card-header">
+                    <div class="stage">
+                        <div class="kicker">
+                            <span class="pill">Stage 2</span>
+                            <span>Vector</span>
+                        </div>
+                        <h2>Pure SVG (no interaction)</h2>
+                        <p>
+                            Crisp at any zoom level. Styling can be aligned with a brand palette. Still “just a
+                            picture”, but a much better one.
+                        </p>
+                    </div>
+                    <div class="meta" aria-label="Stage 2 tags">
+                        <span class="tag">Scalable</span>
+                        <span class="tag">Editable</span>
+                        <span class="tag">Lightweight</span>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="frame" aria-label="Pure SVG placeholder">
+                        <img class="media" src="assets/I-C-S_2026-02-23_pure.svg"
+                            alt="Identify–Capture–Share (pure SVG)" />
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Stage 3 -->
+            <section class="card" id="stage3" aria-label="Stage 3: SVG with hover effects">
+                <div class="card-header">
+                    <div class="stage">
+                        <div class="kicker">
+                            <span class="pill">Stage 3</span>
+                            <span>Interactive</span>
+                        </div>
+                        <h2>SVG with hover effects</h2>
+                        <p>
+                            Adds discoverability: tooltips, emphasis on hover, and a “guided reading” experience —
+                            without leaving the graphic.
+                        </p>
+                    </div>
+                    <div class="meta" aria-label="Stage 3 tags">
+                        <span class="tag">Hover affordances</span>
+                        <span class="tag">Tooltips</span>
+                        <span class="tag">Explorable</span>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="frame" aria-label="SVG hover placeholder">
+                                              <img class="media" src="assets/I-C-S_2026-02-26_withHoverText.svg"
+                            alt="Identify–Capture–Share (SVG with hover effects)" />
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Stage 4 -->
+            <section class="card" id="stage4" aria-label="Stage 4: SVG with hover effects and links">
+                <div class="card-header">
+                    <div class="stage">
+                        <div class="kicker">
+                            <span class="pill">Stage 4</span>
+                            <span>Clickable</span>
+                        </div>
+                        <h2>SVG with hover effects and links</h2>
+                        <p>
+                            Turns the graphic into a navigation surface: hover affordances plus link targets to specs,
+                            docs, repos, or sections.
+                        </p>
+                    </div>
+                    <div class="meta" aria-label="Stage 4 tags">
+                        <span class="tag">Clickable</span>
+                        <span class="tag">Self-contained</span>
+                        <span class="tag">Great for GitHub Pages</span>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="frame" aria-label="SVG hover + links placeholder">
+                       <img class="media" src="assets/I-C-S_2026-02-26_withLinks.svg"
+                            alt="Identify–Capture–Share (SVG with hover effects and links)" />
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+
+        <footer>
+            <div>
+                Built for disussion purposes only.
+            </div>
+            <div>
+                Ralph | Created: 2026-03-17
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const buttons = document.querySelectorAll('[data-focus]');
+        const cards = document.querySelectorAll('.card');
+
+        function activate(id) {
+            cards.forEach(c => c.classList.toggle('active', c.id === id));
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        buttons.forEach(btn => btn.addEventListener('click', () => activate(btn.dataset.focus)));
+        activate('stage4');
+    </script>
+</body>
+
+</html>

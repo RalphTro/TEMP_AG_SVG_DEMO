@@ -1,0 +1,369 @@
+<svg width="1280" height="720"
+     viewBox="0 0 1280 720"
+     xmlns="http://www.w3.org/2000/svg"
+     overflow="hidden">
+
+  <style>
+    .hoverable rect { transition: fill 120ms ease-in-out; }
+    /* Link styling inside tooltip */
+    #hint-link-text { cursor: pointer; text-decoration: underline; }
+  </style>
+
+  <g>
+    <rect x="0" y="0" width="1280" height="720" fill="#FFFFFF"/>
+
+    <!-- CAPTURE (middle) -->
+    <g id="capture" class="hoverable" pointer-events="all">
+      <rect x="94" y="335" width="620" height="146" fill="#4472C4"/>
+      <text fill="#FFFFFF"
+            font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700"
+            font-size="64"
+            transform="translate(131.638 429)">Capture</text>
+    </g>
+
+    <!-- IDENTIFY (bottom) -->
+    <g id="identify" class="hoverable" pointer-events="all">
+      <rect x="94" y="511" width="812" height="146" fill="#CC6600"/>
+      <text fill="#FFFFFF"
+            font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700"
+            font-size="64"
+            transform="translate(131.638 604)">Identify</text>
+    </g>
+
+    <!-- SHARE (top) -->
+    <g id="share" class="hoverable" pointer-events="all">
+      <rect x="94" y="160" width="812" height="146" fill="#70AD47"/>
+      <text fill="#FFFFFF"
+            font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700"
+            font-size="64"
+            transform="translate(131.638 253)">Share</text>
+      <rect x="760" y="160" width="146" height="321" fill="#70AD47"/>
+    </g>
+
+    <g id="text-techstandards">
+      <text font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700"
+            font-size="48"
+            transform="translate(93.7348 106)">Technical Standards</text>
+    </g>
+
+    <!-- USE (right) -->
+    <g id="use" class="hoverable" pointer-events="all">
+      <rect x="952" y="160" width="146" height="497" fill="#00B0F0"/>
+      <text fill="#FFFFFF"
+            font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700"
+            font-size="64"
+            transform="translate(968.785 429)">Use</text>
+    </g>
+
+    <g id="text-appstandards">
+      <text font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-weight="700"
+            font-size="48"
+            transform="matrix(-1.83697e-16 -1 1 -1.83697e-16 1177.89 654)">Application Standards</text>
+    </g>
+
+    <!-- Tooltip layer -->
+    <g id="hint" visibility="hidden" pointer-events="all">
+      <rect id="hint-bg"
+            x="0" y="0"
+            rx="12" ry="12"
+            fill="#FFFFFF"
+            stroke="#333333"
+            stroke-width="2"
+            opacity="0.96"/>
+      <!-- Main text (wrapped via JS with tspans) -->
+      <text id="hint-text"
+            x="16" y="34"
+            font-family="Aptos,Aptos_MSFontService,sans-serif"
+            font-size="20"
+            fill="#111111"></text>
+
+      <!-- Clickable line (shown only for identify/capture/share) -->
+      <a id="hint-link" href="" target="_blank" rel="noopener noreferrer">
+        <text id="hint-link-text"
+              x="16"
+              font-family="Aptos,Aptos_MSFontService,sans-serif"
+              font-size="18"
+              fill="#0066CC">Click for more information</text>
+      </a>
+    </g>
+
+    <script><![CDATA[
+      (function () {
+        const svg = document.documentElement;
+
+        // Tooltip texts + optional links
+        const HINTS = {
+          identify: {
+            text: 'Example: GS1 ID Keys such as the Global Trade Item Number (GTIN)',
+            link: 'https://ref.gs1.org/architecture/system-architecture/#h-identify-gs1-identification-keys'
+          },
+          capture: {
+            text: 'Example: QR Code encoding a GS1 Digital Link URI',
+            link: 'https://ref.gs1.org/architecture/system-architecture/#h-capture-automatic-identification-data-capture-aidc-'
+          },
+          share: {
+            text: 'Example: an Invoice message',
+            link: 'https://ref.gs1.org/architecture/system-architecture/#h-share-business-data-and-communication'
+          },
+          use: {
+            text: 'Example: GS1 Digital Product Passport (DPP) Application Standard'
+            // no link requested for "use" (link line will be hidden)
+          }
+        };
+
+        // Tooltip elements
+        const hint = document.getElementById('hint');
+        const hintBg = document.getElementById('hint-bg');
+        const hintText = document.getElementById('hint-text');
+        const hintLink = document.getElementById('hint-link');
+        const hintLinkText = document.getElementById('hint-link-text');
+
+        // Hover fill handling
+        const originalFills = new Map();
+
+        // Layout constants
+        const VIEW_W = 1280, VIEW_H = 720;
+        const PAD = 16;
+        const GAP = 16;
+        const LINE_HEIGHT = 26;
+
+        const MIN_TOOLTIP_W = 420;
+        const MAX_TOOLTIP_W = 620;
+
+        // Extra vertical space for link line (baseline spacing)
+        const LINK_GAP = 16;      // space between main text block and link line
+        const LINK_LINE_HEIGHT = 24;
+        const BOTTOM_PAD = 12;    // bottom padding inside tooltip
+
+        // State so tooltip stays clickable (doesn't vanish when moving from rect to tooltip)
+        let activeId = null;
+        let activeGroup = null;
+        let hideTimer = null;
+
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+        function lightenHex(hex, amt) {
+          const h = (hex || '#000000').replace('#','');
+          const r = parseInt(h.substring(0,2),16);
+          const g = parseInt(h.substring(2,4),16);
+          const b = parseInt(h.substring(4,6),16);
+          const lr = Math.round(r + (255 - r) * amt);
+          const lg = Math.round(g + (255 - g) * amt);
+          const lb = Math.round(b + (255 - b) * amt);
+          const toHex = n => n.toString(16).padStart(2,'0');
+          return `#${toHex(lr)}${toHex(lg)}${toHex(lb)}`;
+        }
+
+        function setHoverFill(group, on) {
+          const rects = group.querySelectorAll('rect');
+          rects.forEach((rect) => {
+            const current = rect.getAttribute('fill') || '#000000';
+            if (!originalFills.has(rect)) originalFills.set(rect, current);
+            const orig = originalFills.get(rect);
+            rect.setAttribute('fill', on ? lightenHex(orig, 0.15) : orig);
+          });
+        }
+
+        // Wrap text into tspans within maxTextW and return sizing
+        function setTooltipMainText(str, maxTextW) {
+          while (hintText.firstChild) hintText.removeChild(hintText.firstChild);
+
+          const words = (str || '').split(/\s+/).filter(Boolean);
+          let line = '';
+          let lines = [];
+
+          // Measure using a temporary tspan
+          const tmp = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          tmp.setAttribute('x', String(PAD));
+          tmp.setAttribute('dy', '0');
+          hintText.appendChild(tmp);
+
+          function measure(s) {
+            tmp.textContent = s;
+            return tmp.getComputedTextLength();
+          }
+
+          for (let i = 0; i < words.length; i++) {
+            const test = line ? (line + ' ' + words[i]) : words[i];
+            if (measure(test) > maxTextW && line) {
+              lines.push(line);
+              line = words[i];
+            } else {
+              line = test;
+            }
+          }
+          if (line) lines.push(line);
+
+          // Render final tspans
+          while (hintText.firstChild) hintText.removeChild(hintText.firstChild);
+          lines.forEach((ln, idx) => {
+            const sp = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            sp.setAttribute('x', String(PAD));
+            sp.setAttribute('dy', idx === 0 ? '0' : String(LINE_HEIGHT));
+            sp.textContent = ln;
+            hintText.appendChild(sp);
+          });
+
+          // Compute widest line
+          let maxLineW = 0;
+          Array.from(hintText.childNodes).forEach(sp => {
+            const w = sp.getComputedTextLength();
+            if (w > maxLineW) maxLineW = w;
+          });
+
+          const textHeight = lines.length * LINE_HEIGHT;
+
+          // y baseline for first line
+          hintText.setAttribute('y', String(PAD + 18));
+
+          return { maxLineW, textHeight };
+        }
+
+        function layoutTooltip(id) {
+          const data = HINTS[id];
+          const hasLink = !!(data && data.link);
+
+          // Main text layout
+          const { maxLineW, textHeight } = setTooltipMainText(
+            data.text,
+            (MAX_TOOLTIP_W - PAD * 2)
+          );
+
+          // Link visibility + href
+          if (hasLink) {
+            hintLink.setAttribute('href', data.link);
+            hintLink.setAttribute('visibility', 'visible');
+            hintLinkText.setAttribute('visibility', 'visible');
+
+            // Position link line below the main text block
+            const linkY = (PAD + 18) + textHeight + LINK_GAP;
+            hintLinkText.setAttribute('y', String(linkY));
+
+          } else {
+            hintLink.setAttribute('visibility', 'hidden');
+            hintLinkText.setAttribute('visibility', 'hidden');
+            hintLink.removeAttribute('href');
+          }
+
+          // Measure link width if present
+          let linkW = 0;
+          if (hasLink) {
+            // ensure the link text is measurable after y is set
+            linkW = hintLinkText.getComputedTextLength();
+          }
+
+          // Compute background width (fit both main text and link line)
+          const contentW = Math.max(maxLineW, linkW);
+          const bgW = clamp(contentW + PAD * 2, MIN_TOOLTIP_W, MAX_TOOLTIP_W);
+
+          // Compute background height
+          // Top padding is effectively PAD; first baseline at PAD+18; textHeight counts line spacing.
+          // Then optional link line + bottom padding
+          let bgH = (PAD + 18) + textHeight + BOTTOM_PAD;
+          if (hasLink) {
+            bgH = (PAD + 18) + textHeight + LINK_GAP + LINK_LINE_HEIGHT + BOTTOM_PAD;
+          }
+
+          hintBg.setAttribute('width', String(bgW));
+          hintBg.setAttribute('height', String(bgH));
+
+          return { bgW, bgH };
+        }
+
+        function positionTooltip(group, id, bgW, bgH) {
+          const b = group.getBBox();
+
+          // Default: place right of hovered group; fallback to left if needed
+          let x = b.x + b.width + GAP;
+          let y = b.y + (b.height / 2) - (bgH / 2);
+
+          // Special rule: for "use", force tooltip into first third (left side),
+          // so it doesn't overlay the "Use" rectangle / label.
+          if (id === 'use') {
+            const maxXFirstThird = (VIEW_W / 3) - bgW - 8;
+            x = clamp(80, 8, Math.max(8, maxXFirstThird));
+            y = b.y + (b.height / 2) - (bgH / 2);
+          } else {
+            // If it would overflow right edge, place left of hovered box
+            if (x + bgW > VIEW_W - 8) {
+              x = b.x - bgW - GAP;
+            }
+          }
+
+          // Clamp within canvas
+          x = clamp(x, 8, VIEW_W - bgW - 8);
+          y = clamp(y, 8, VIEW_H - bgH - 8);
+
+          hint.setAttribute('transform', `translate(${x},${y})`);
+        }
+
+        function clearHideTimer() {
+          if (hideTimer) {
+            clearTimeout(hideTimer);
+            hideTimer = null;
+          }
+        }
+
+        function showHint(id, group) {
+          clearHideTimer();
+
+          // If switching from another group, unhover it first
+          if (activeGroup && activeGroup !== group) {
+            setHoverFill(activeGroup, false);
+          }
+
+          activeId = id;
+          activeGroup = group;
+
+          setHoverFill(group, true);
+
+          const { bgW, bgH } = layoutTooltip(id);
+          positionTooltip(group, id, bgW, bgH);
+
+          hint.setAttribute('visibility', 'visible');
+        }
+
+        function hideHintNow() {
+          clearHideTimer();
+          hint.setAttribute('visibility', 'hidden');
+
+          if (activeGroup) setHoverFill(activeGroup, false);
+
+          activeId = null;
+          activeGroup = null;
+        }
+
+        function scheduleHide() {
+          clearHideTimer();
+          hideTimer = setTimeout(() => {
+            // If user moved into tooltip, we won't hide (tooltip mouseenter cancels)
+            hideHintNow();
+          }, 120);
+        }
+
+        // Attach handlers to main groups
+        Object.keys(HINTS).forEach(id => {
+          const g = document.getElementById(id);
+          if (!g) return;
+
+          g.style.cursor = 'pointer';
+
+          g.addEventListener('mouseenter', () => showHint(id, g));
+          g.addEventListener('mouseleave', () => scheduleHide());
+        });
+
+        // Keep tooltip visible while hovering tooltip (so link is clickable)
+        hint.addEventListener('mouseenter', () => clearHideTimer());
+        hint.addEventListener('mouseleave', () => scheduleHide());
+
+      })();
+    ]]></script>
+
+  </g>
+</svg>
